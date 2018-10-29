@@ -1,0 +1,21 @@
+------------ Options -------------
+batchSize: 1
+beta1: 0.5
+border_size: 7
+convergence_threshold: 0.001
+datarootA: pika/a.png
+datarootB: pika/b.png
+fast: False
+gamma: 1
+gpu_ids: []
+imageSize: 224
+input_nc: 3
+k_final: 10
+k_per_level: inf
+lr: 0.05
+name: experiment_name
+niter_decay: 100
+results_dir: ../results
+save_path: pika
+tau: 0.05
+-------------- End ----------------
