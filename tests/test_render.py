@@ -8,5 +8,7 @@ class TestRender(unittest.TestCase):
         img0 = cv2.imread('tests/data/nbb/original_A.png')
         img1 = cv2.imread('tests/data/nbb/original_B.png')
         v = np.load('tests/data/nbb/AtoB.npy')
-        render_animation(img0, img1, v, file_name='test/data/render/animation.mov')
+        render_animation(img0, img1, v,
+            file_name='tests/data/render/animation.mov',
+            steps=30)
         return
