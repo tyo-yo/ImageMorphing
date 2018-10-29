@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from itertools import product
 from image_morphing.utils import get_color, save_animation
+import os
 
 def render(img0, img1, v, alpha=0.5):
     morphed = np.zeros_like(img0)
@@ -29,6 +30,8 @@ def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mo
         img = render(img0, img1, v, alpha)
         imgs.append(img)
     if save:
+        if os.path.exists(file_name):
+            os.remove(file_name)
         save_animation(imgs, file_name=file_name, time=time)
     return imgs
 
