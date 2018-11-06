@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import cv2
 
 def imshow(img):
+    if img.std() < 1:
+        img = img * 255
     if img.ndim == 2:
-        plt.imshow(img.astype(np.int))
+        plt.imshow(img.astype(np.uint8))
     else:
-        plt.imshow(img[:, :, ::-1].astype(np.int))
+        plt.imshow(img[:, :, ::-1].astype(np.uint8))
 
 def get_color(img, p):
     p = np.array(p)
@@ -67,6 +69,10 @@ def load_points(path):
 def resize_all(size, img0, img1, v, p0, p1):
     img0_low = cv2.resize(img0, (size, size))
     img1_low = cv2.resize(img1, (size, size))
+    if img0_low.std() > 1:
+        img0_low = img0_low / 255.0
+    if img1_low.std() > 1:
+        img1_low = img1_low / 255.0
 
     vx = v[:, :, 0]
     vy = v[:, :, 1]
@@ -75,7 +81,7 @@ def resize_all(size, img0, img1, v, p0, p1):
     vx_low = vx_low[:, :, np.newaxis]
     vy_low = vy_low[:, :, np.newaxis]
     v_low = np.concatenate([vx_low, vy_low], axis=2)
-    v_low = v_low / img0.shape[0] * size
+    v_low = v_low / v.shape[0] * size
 
     p0_low = p0 / img0.shape[0] * size
     p1_low = p1 / img1.shape[0] * size
