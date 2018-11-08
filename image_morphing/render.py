@@ -1,15 +1,18 @@
-import numpy as np
+from image_morphing.np import np, GPU
+# import numpy as np
 import cv2
 from itertools import product
 from image_morphing.utils import get_color, save_animation
 import os
 from image_morphing.utils import describe, imshow
-img0 = cv2.imread('tests/data/nbb/original_A.png')
-img1 = cv2.imread('tests/data/nbb/original_b.png')
-v = np.load('tests/data/nbb/AtoB.npy').astype(np.float)
+from image_morphing.utils import resize_img, resize_v
+from datetime import datetime
+# img0 = cv2.imread('tests/data/nbb/original_A.png')
+# img1 = cv2.imread('tests/data/nbb/original_b.png')
+# v = np.load('tests/data/nbb/AtoB.npy').astype(np.float)
 
 def render(img0, img1, v, alpha=0.5):
-    X, Y = np.meshgrid(range(img0.shape[0]), range(img0.shape[1]))
+    X, Y = np.meshgrid(np.arange(img0.shape[0]), np.arange(img0.shape[1]))
     Y = Y[:, :, np.newaxis]
     X = X[:, :, np.newaxis]
     q = np.concatenate([Y, X], axis=2)
@@ -28,6 +31,8 @@ def render(img0, img1, v, alpha=0.5):
     morphed = (1 - alpha) * c0 + alpha * c1
     if morphed.std() > 1:
         morphed = morphed.astype(np.uint8)
+    if GPU:
+        morphed = np.asnumpy(morphed)
     return morphed
 
 def _render_deprecated(img0, img1, v, alpha=0.5):
@@ -50,6 +55,8 @@ def _render_deprecated(img0, img1, v, alpha=0.5):
 
 def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mov', time=1):
     alpha_list = np.arange(0, 1.0 + 1e-5, 1.0/steps)
+    if GPU:
+        alpha_list = np.asnumpy(alpha_list)
     imgs = []
     print('Start Rendering')
     for alpha in alpha_list:
@@ -73,3 +80,11 @@ def get_vp(v, p):
     p[1] = np.clip(p[1], 0, v.shape[1] - 1)
     p = p.astype(np.int)
     return v[p[0], p[1]]
+
+def render_animation_highres(img0_src, img1_src, v):
+    name = '.cache/anim_{}'.format(datetime.now().strftime('%m%d%H%M'))
+
+    img0_256, img1_256 = resize_img(256, img0_src, img1_src)
+    v256 = resize_v(256, v)
+
+    render_animation(img0_256, img1_256, v256, file_name=name+'.mov')

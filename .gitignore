@@ -1,5 +1,9 @@
 *.DS_Store
 tmp.py
+tmp2.py
+local.ipynb
+tests/data/optimize_v/left.png
+tests/data/optimize_v/right.png
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
