@@ -1,35 +1,6 @@
-# import numpy as np
 from image_morphing.np import np, GPU
 import matplotlib.pyplot as plt
 import cv2
-
-# %load_ext autoreload
-# %autoreload 2
-# from image_morphing.utils import *
-# img0_src = cv2.imread('tests/data/nbb/original_A.png')
-# img1_src = cv2.imread('tests/data/nbb/original_b.png')
-# v_src = np.load('tests/data/nbb/AtoB.npy').astype(np.float)
-# p0_src = load_points('tests/data/nbb/correspondence_A_top_100.txt')
-# p1_src = load_points('tests/data/nbb/correspondence_Bt_top_100.txt')
-# v_opt8 = np.load('.cache/v008_p100.npy')
-# v_opt16 = np.load('.cache/v016_p1000.npy')
-# v_opt32 = np.load('.cache/v032_p1000.npy')
-# v_opt64 = np.load('.cache/v064_p1000.npy')
-#
-# size = 16
-# lr = 1e-3
-#
-# img0, img1, v, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
-# args = (img0, img1, p0, p1, 1e-3, 1e2)
-#
-# X = img0
-# kernel = np.array([
-#     [0, 0, 0],
-#     [1, -2, 1],
-#     [0, 0, 0]])
-# kernel = kernel.reshape([3, 3, 1])
-# x = x[np.newaxis, :, : , :]
-# x.shape
 
 def imshow(img):
     if GPU:
