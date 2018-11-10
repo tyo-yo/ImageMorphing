@@ -1,4 +1,3 @@
-# import numpy as np
 from image_morphing.np import np, GPU
 from datetime import datetime
 from scipy.optimize import minimize
@@ -11,49 +10,13 @@ if GPU:
     from image_morphing.utils import convolve
 else:
     from scipy.signal import convolve
+
 _iter = 0
 _args = ()
 _prev_time = 0
 _log_interbal = 0
 _LOGINTERBAL = 5
 _elapsed_time = 0
-
-# %load_ext autoreload
-# %autoreload 2
-# from image_morphing.utils import *
-# img0_src = cv2.imread('tests/data/nbb/original_A.png')
-# img1_src = cv2.imread('tests/data/nbb/original_b.png')
-# v_src = np.load('tests/data/nbb/AtoB.npy').astype(np.float)
-# p0_src = load_points('tests/data/nbb/correspondence_A_top_100.txt')
-# p1_src = load_points('tests/data/nbb/correspondence_Bt_top_100.txt')
-# v_opt8 = np.load('.cache/v008_p100.npy')
-# v_opt16 = np.load('.cache/v016_p1000.npy')
-# v_opt32 = np.load('.cache/v032_p1000.npy')
-# v_opt64 = np.load('.cache/v064_p1000.npy')
-#
-# lr = 1e-3
-# size = 16
-# img0, img1, v, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
-# args = (img0, img1, p0, p1, 1e-3, 1e2)
-# print('eps:1e-3')
-# for i in range(5):
-#     v = v_opt16 + np.random.randn(size,size,2) * 1e-1
-#     dedv, ev = dEdv(v, *args)
-#     ori = E(v, *args)
-#     e_1 = E(v - 1e-1 * dedv, *args)
-#     e_2 = E(v - 1e-2 * dedv, *args)
-#     e_3 = E(v - 1e-3 * dedv, *args)
-#     e_4 = E(v - 1e-4 * dedv, *args)
-#     e_5 = E(v - 1e-5 * dedv, *args)
-#     e_6 = E(v - 1e-6 * dedv, *args)
-#     print('ori: {:.2f}, 1e-1: {:.2f}, 1e-2: {:.2f}, 1e-3: {:.2f}, 1e-4: {:.2f}, 1e-5: {:.2f}, 1e-6: {:.2f},'.format(ori,e_1,e_2,e_3,e_4,e_5,e_6))
-
-# v_opt_1, res1, half1 = optimize_v_size(size, img0_src, img1_src, v_src, p0_src,
-#     p1_src, tol=1e-1, lambda_tps=1e-3, gamma_ui=1e2)
-# v_sgd = sgd(size, img0_src, img1_src, v_src, p0_src, p1_src,
-#     tol=1e-3, lambda_tps=1e-3, gamma_ui=1e2, lr=1e-3)
-# v_adam = adam(size, img0_src, img1_src, v_src, p0_src, p1_src,
-#     tol=1e-3, lambda_tps=1e-3, gamma_ui=1e2, lr=1e-2)
 
 def dEdv(v, *args):
     eps = 1e-2
@@ -143,26 +106,6 @@ def optimize_v_size(size, img0_src, img1_src, v_src, p0_src, p1_src, method=None
     np.save(name + '.npy', v_opt)
     return v_opt, res, half
 
-# def optimize_v_bfgs(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1, lambda_tps=1e-3, gamma_ui=1e2):
-#     global _args, _iter, _prev_time, _elapsed_time
-#     img0, img1, v0, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
-#     _args = (img0, img1, p0, p1, lambda_tps, gamma_ui)
-#     _iter = 0
-#     _prev_time = start = time.time()
-#     _elapsed_time = 0
-#     res = minimize(E_gradE, v0, args=_args, method=None, jac=True, callback=log_cb, tol=tol)
-#     end = time.time()
-#     print('Time: {:.3f}'.format(end - start))
-#     print(res.message)
-#     v_opt = res.x
-#     v_opt = v_opt.reshape(v0.shape)
-#     name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
-#     # render_animation(img0, img1, v_opt, file_name=name+'.mov')
-#     img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v_opt, p0_src, p1_src)
-#     render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
-#     half = render(img0, img1, v_opt)
-#     np.save(name + '.npy', v_opt)
-    # return v_opt, res, half
 
 def sgd(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1, lambda_tps=1e-3, gamma_ui=1e2, lr=1e-2, return_half=False):
     img0, img1, v, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
@@ -217,36 +160,44 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
 
     m = np.zeros_like(v)
     vt = np.zeros_like(v)
+    try:
+        while 1:
+            grads, e = dEdv(v, *args)
 
-    while 1:
-        grads, e = dEdv(v, *args)
+            iter += 1
+            lr_t  = lr * np.sqrt(1.0 - beta2**iter) / (1.0 - beta1**iter)
 
-        iter += 1
-        lr_t  = lr * np.sqrt(1.0 - beta2**iter) / (1.0 - beta1**iter)
+            m += (1 - beta1) * (grads - m)
+            vt += (1 - beta2) * (grads**2 - vt)
 
-        m += (1 - beta1) * (grads - m)
-        vt += (1 - beta2) * (grads**2 - vt)
+            v -= lr_t * m / (np.sqrt(vt) + 1e-7)
 
-        v -= lr_t * m / (np.sqrt(vt) + 1e-7)
+            #unbias_m += (1 - beta1) * (grads - m) # correct bias
+            #unbisa_b += (1 - beta2) * (grads*grads - vt) # correct bias
+            #params += lr * unbias_m / (np.sqrt(unbisa_b) + 1e-7)
 
-        #unbias_m += (1 - beta1) * (grads - m) # correct bias
-        #unbisa_b += (1 - beta2) * (grads*grads - vt) # correct bias
-        #params += lr * unbias_m / (np.sqrt(unbisa_b) + 1e-7)
+            log_interbal += time.time() - prev
+            prev = time.time()
 
-        log_interbal += time.time() - prev
-        prev = time.time()
+            if log_interbal > _LOGINTERBAL or iter == 1:
+                if GPU:
+                    ev = np.asnumpy(E(v, *args))
+                else:
+                    ev = E(v, *args)
+                print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
+                    iter, ev, time.time() - start))
+                log_interbal = 0
+            if abs(prev_e - e) < tol:
+                break
+            prev_e = e
+    except KeyboardInterrupt:
+        print('Interrupted')
+        name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
+        img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v, p0_src, p1_src)
+        render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
+        np.save(name + '.npy', v)
+        return v
 
-        if log_interbal > _LOGINTERBAL or iter == 1:
-            if GPU:
-                ev = np.asnumpy(E(v, *args))
-            else:
-                ev = E(v, *args)
-            print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
-                iter, ev, time.time() - start))
-            log_interbal = 0
-        if abs(prev_e - e) < tol:
-            break
-        prev_e = e
     end = time.time()
 
     if GPU:
