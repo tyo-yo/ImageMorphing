@@ -1,23 +1,28 @@
-import numpy as np
+from image_morphing.np import np, GPU
 import cv2
 from itertools import product
 from image_morphing.utils import get_color, save_animation
 import os
 from image_morphing.utils import describe, imshow
-img0 = cv2.imread('tests/data/nbb/original_A.png')
-img1 = cv2.imread('tests/data/nbb/original_b.png')
-v = np.load('tests/data/nbb/AtoB.npy').astype(np.float)
+from image_morphing.utils import resize_img, resize_v
+from datetime import datetime
 
-def render(img0, img1, v, alpha=0.5):
-    X, Y = np.meshgrid(range(img0.shape[0]), range(img0.shape[1]))
+def render(img0, img1, v, alpha=0.5, w =None):
+    X, Y = np.meshgrid(np.arange(img0.shape[0]), np.arange(img0.shape[1]))
     Y = Y[:, :, np.newaxis]
     X = X[:, :, np.newaxis]
     q = np.concatenate([Y, X], axis=2)
     vp = get_color(v, q)
+    if w is not None:
+        wp = get_color(w, q)
     dampening = 0.8
 
     for i in range(20):
-        p = q - (2.0 * alpha - 1.0) * vp
+        if w is None:
+            p = q - (2.0 * alpha - 1.0) * vp
+        else:
+            p = q - (2.0 * alpha - 1.0) * vp - 4 * alpha * (1 - alpha) * wp
+            wp = get_color(w, p)
         new_vp = get_color(v, p)
         vp = dampening * new_vp + (1 - dampening) * vp
         if np.linalg.norm(vp-new_vp) < 1e-5:
@@ -28,6 +33,8 @@ def render(img0, img1, v, alpha=0.5):
     morphed = (1 - alpha) * c0 + alpha * c1
     if morphed.std() > 1:
         morphed = morphed.astype(np.uint8)
+    if GPU:
+        morphed = np.asnumpy(morphed)
     return morphed
 
 def _render_deprecated(img0, img1, v, alpha=0.5):
@@ -48,13 +55,15 @@ def _render_deprecated(img0, img1, v, alpha=0.5):
         morphed[q] = (1 - alpha) * c0 + alpha * c1
     return morphed
 
-def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mov', time=1):
+def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mov', time=1,  w=None):
     alpha_list = np.arange(0, 1.0 + 1e-5, 1.0/steps)
+    if GPU:
+        alpha_list = np.asnumpy(alpha_list)
     imgs = []
     print('Start Rendering')
     for alpha in alpha_list:
         # print('Rendering: {:.1f} %'.format(alpha*100))
-        img = render(img0, img1, v, alpha)
+        img = render(img0, img1, v, alpha=alpha, w=w)
         if img.std() < 1:
             img = (img * 255).astype(np.uint8)
         else:
@@ -67,9 +76,27 @@ def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mo
     print('Rendering finished!')
     return imgs
 
+def render_animation_256(img0_src, img1_src, v, steps=30, save=True, time=1,  w=None, name=None):
+    if name is None:
+        name = '.cache/anim{:03d}_{}'.format(v.shape[0], datetime.now().strftime('%m%d%H%M'))
+    img0_256, img1_256 = resize_img(256, img0_src, img1_src)
+    v = resize_v(256, v)
+    if w is not None:
+        w = resize_v(256, w)
+    render_animation(img0_256, img1_256, v, w=w, file_name=name+'.mov', steps=steps, time=time)
+
+
 def get_vp(v, p):
     p = np.array(p)
     p[0] = np.clip(p[0], 0, v.shape[0] - 1)
     p[1] = np.clip(p[1], 0, v.shape[1] - 1)
     p = p.astype(np.int)
     return v[p[0], p[1]]
+
+def render_animation_highres(img0_src, img1_src, v):
+    name = '.cache/anim_{}'.format(datetime.now().strftime('%m%d%H%M'))
+
+    img0_256, img1_256 = resize_img(256, img0_src, img1_src)
+    v256 = resize_v(256, v)
+
+    render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
