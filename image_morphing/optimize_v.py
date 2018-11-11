@@ -148,8 +148,8 @@ def sgd(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1, lambda_tps=1e
         return v
 
 def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
-    lambda_tps=1e-3, gamma_ui=1e2, lr=1e-4, return_half=False,
-    beta1=0.9, beta2=0.999, eps=1e-8):
+    lambda_tps=1e-3, gamma_ui=1e2, lr=1e-4, beta1=0.9, beta2=0.999, eps=1e-8,
+    render=True):
     img0, img1, v, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
     args = (img0, img1, p0, p1, lambda_tps, gamma_ui)
     iter = 0
@@ -194,7 +194,8 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
         print('Interrupted')
         name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
         img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v, p0_src, p1_src)
-        render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
+        if render:
+            render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
         np.save(name + '.npy', v)
         return v
 
@@ -204,19 +205,15 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
         ev = np.asnumpy(E(v, *args))
     else:
         ev = E(v, *args)
-    print('Optimization finished!')
     print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
         iter, ev, end - start))
-
+    print('Optimization of v finished!')
     name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
     img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v, p0_src, p1_src)
-    render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
+    if render:
+        render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
     np.save(name + '.npy', v)
-    if return_half:
-        half = render(img0, img1, v)
-        return v, half
-    else:
-        return v
+    return v
 
 def SIM(x, y, C2=58.5, C3=29.3):
     '''
