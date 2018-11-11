@@ -92,11 +92,3 @@ def get_vp(v, p):
     p[1] = np.clip(p[1], 0, v.shape[1] - 1)
     p = p.astype(np.int)
     return v[p[0], p[1]]
-
-def render_animation_highres(img0_src, img1_src, v):
-    name = '.cache/anim_{}'.format(datetime.now().strftime('%m%d%H%M'))
-
-    img0_256, img1_256 = resize_img(256, img0_src, img1_src)
-    v256 = resize_v(256, v)
-
-    render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
