@@ -103,20 +103,28 @@ def resize_img(size, img0, img1):
         img1_low = img1_low / 255.0
     return img0_low, img1_low
 
-def resize_v(size, v):
+def resize_v(size, v, size_x=None):
     if GPU:
         v = np.asnumpy(v)
     vx = v[:, :, 0]
     vy = v[:, :, 1]
-    vx_low = cv2.resize(vx, (size, size))
-    vy_low = cv2.resize(vy, (size, size))
+    if size_x is None:
+        vx_low = cv2.resize(vx, (size, size))
+        vy_low = cv2.resize(vy, (size, size))
+    else:
+        vx_low = cv2.resize(vx, (size, size_x))
+        vy_low = cv2.resize(vy, (size, size_x))
     if GPU:
         vx_low = np.asarray(vx_low)
         vy_low = np.asarray(vy_low)
     vx_low = vx_low[:, :, np.newaxis]
     vy_low = vy_low[:, :, np.newaxis]
     v_low = np.concatenate([vx_low, vy_low], axis=2)
-    v_low = v_low / v.shape[0] * size
+    if size_x is None:
+        v_low = v_low / v.shape[0] * size
+    else:
+        v_low[0] = v_low[0] / v.shape[0] * size
+        v_low[1] = v_low[1] / v.shape[1] * size_x
     return v_low
 
 def resize_p(size, original_size, p0, p1):
