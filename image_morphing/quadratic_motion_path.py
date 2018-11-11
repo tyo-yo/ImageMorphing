@@ -55,7 +55,7 @@ def optimize_w_scipy(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-1,
         render_animation_256(img0_src, img1_src, v, w=w, name=name)
     return w_opt, res
 
-def optimize_w_adam(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
+def adam_w(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
     beta=1, lr=1e-3, beta1=0.9, beta2=0.999, eps=1e-8, tol_count=5):
     w = resize_v(size, w_src)
     v = resize_v(size, v_src)
@@ -110,9 +110,9 @@ def optimize_w_adam(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
         ew = np.asnumpy(Ew(w, *args))
     else:
         ew = Ew(w, *args)
-    print('Optimization finished!')
     print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
         iter, ew[0], end - start))
+    print('Optimization of w finished!')
 
     name = '.cache/w{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
     if img0_src is not None and img1_src is not None:
