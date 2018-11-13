@@ -8,7 +8,7 @@ from image_morphing.utils import resize_img, resize_v
 from datetime import datetime
 
 def render(img0, img1, v, alpha=0.5, w =None):
-    X, Y = np.meshgrid(np.arange(img0.shape[0]), np.arange(img0.shape[1]))
+    X, Y = np.meshgrid(np.arange(img0.shape[1]), np.arange(img0.shape[0]))
     Y = Y[:, :, np.newaxis]
     X = X[:, :, np.newaxis]
     q = np.concatenate([Y, X], axis=2)
