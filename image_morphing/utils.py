@@ -60,7 +60,7 @@ def save_animation(imgs, file_name='animation.mov', time=1):
         file_name,
         int(fourcc),
         fps,
-        imgs[0].shape[:2])
+        (imgs[0].shape[0], imgs[0].shape[1]))
     for img in imgs:
         if GPU:
             img = np.asnumpy(img)
@@ -69,6 +69,8 @@ def save_animation(imgs, file_name='animation.mov', time=1):
 def describe(x):
     print('*** Numpy array info ***')
     print('type : ' + str(type(x)))
+    if GPU:
+        x = np.asnumpy(x)
     print('shape : ' + str(x.shape))
     print('mean : {:.4f}'.format(x.mean()))
     print('std : {:.4f}'.format(x.std()))
@@ -123,8 +125,8 @@ def resize_v(size, v, size_x=None):
     if size_x is None:
         v_low = v_low / v.shape[0] * size
     else:
-        v_low[0] = v_low[0] / v.shape[0] * size
-        v_low[1] = v_low[1] / v.shape[1] * size_x
+        v_low[:, :, 0] = v_low[:, :, 0] / v.shape[0] * size
+        v_low[:, :, 1] = v_low[:, :, 1] / v.shape[1] * size_x
     return v_low
 
 def resize_p(size, original_size, p0, p1):

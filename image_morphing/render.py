@@ -8,7 +8,7 @@ from image_morphing.utils import resize_img, resize_v
 from datetime import datetime
 
 def render(img0, img1, v, alpha=0.5, w =None):
-    X, Y = np.meshgrid(np.arange(img0.shape[0]), np.arange(img0.shape[1]))
+    X, Y = np.meshgrid(np.arange(img0.shape[1]), np.arange(img0.shape[0]))
     Y = Y[:, :, np.newaxis]
     X = X[:, :, np.newaxis]
     q = np.concatenate([Y, X], axis=2)
@@ -41,6 +41,11 @@ def render_animation(img0, img1, v, steps=30, save=True, file_name='animation.mo
     alpha_list = np.arange(0, 1.0 + 1e-5, 1.0/steps)
     if GPU:
         alpha_list = np.asnumpy(alpha_list)
+        img0 = np.asarray(img0)
+        img1 = np.asarray(img1)
+        v = np.asarray(v)
+        if w is not None:
+            w = np.asarray(w)
     imgs = []
     print('Start Rendering')
     for alpha in alpha_list:

@@ -10,12 +10,13 @@ if GPU:
     from image_morphing.utils import convolve
 else:
     from scipy.signal import convolve
+import os
 
 _iter = 0
 _args = ()
 _prev_time = 0
 _log_interbal = 0
-_LOGINTERBAL = 5
+_LOGINTERBAL = 10
 _elapsed_time = 0
 
 def dEdv(v, *args):
@@ -27,7 +28,7 @@ def dEdv(v, *args):
     v = v.flatten()
 
     if size > 32:
-        n_split = (size // 32) ** 4
+        n_split = (size // 32 + 1) ** 4
     else:
         n_split = 1
     n_part = v.size // n_split
@@ -50,17 +51,20 @@ def E_gradE(v, *args):
 def E(v, *args):
     img0, img1, p0, p1, lambda_tps, gamma_ui = args
     v = v.reshape((img0.shape[0], img0.shape[1], 2))
-    e_sim = E_SIM(v, img0, img1)
-    # e_sim = 1
-    e_tps = E_TPS(v)
+    # e_sim = E_SIM(v, img0, img1)
+    s = img0.shape[0] * img0.shape[1]
+    e_sim = 0
+    e_tps = E_TPS(v) / s * 10
     e_ui = E_UI(v, p0, p1)
-    return e_sim + lambda_tps * e_tps + gamma_ui * e_ui
+    return e_sim  + lambda_tps * e_tps + gamma_ui * e_ui
 
 def _E(v, *args):
     img0, img1, p0, p1, lambda_tps, gamma_ui = args
     v = v.reshape((-1, img0.shape[0], img0.shape[1], 2))
-    e_sim = E_SIM(v, img0, img1) # about 1
-    e_tps = E_TPS(v) # about 50
+    # e_sim = E_SIM(v, img0, img1) # about 1
+    e_sim = 0
+    s = img0.shape[0] * img0.shape[1]
+    e_tps = E_TPS(v) / s * 10 # about 50
     e_ui = E_UI(v, p0, p1) # about 4
     return e_sim + lambda_tps * e_tps + gamma_ui * e_ui
 
@@ -147,9 +151,9 @@ def sgd(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1, lambda_tps=1e
     else:
         return v
 
-def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
-    lambda_tps=1e-3, gamma_ui=1e2, lr=1e-4, beta1=0.9, beta2=0.999, eps=1e-8,
-    render=True):
+def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1, tol_count=20,
+        lambda_tps=1e-3, gamma_ui=1e2, lr=1e-4, beta1=0.9, beta2=0.999, eps=1e-8,
+        render=True, save_dir='.cache'):
     img0, img1, v, p0, p1 = resize_all(size, img0_src, img1_src, v_src, p0_src, p1_src)
     args = (img0, img1, p0, p1, lambda_tps, gamma_ui)
     iter = 0
@@ -157,6 +161,7 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
 
     log_interbal = 0
     prev_e = 1e10
+    count = 0
 
     m = np.zeros_like(v)
     vt = np.zeros_like(v)
@@ -187,12 +192,16 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
                 print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
                     iter, ev, time.time() - start))
                 log_interbal = 0
-            if abs(prev_e - e) < tol:
+            if abs(prev_e - e) < tol and e < prev_e:
                 break
+            elif prev_e < e:
+                count += 1
+                if count >= tol_count:
+                    break
             prev_e = e
     except KeyboardInterrupt:
         print('Interrupted')
-        name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
+        name = os.path.join(save_dir, 'v{:03d}'.format(size))
         img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v, p0_src, p1_src)
         if render:
             render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
@@ -208,7 +217,7 @@ def adam(size, img0_src, img1_src, v_src, p0_src, p1_src, tol=1e-1,
     print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
         iter, ev, end - start))
     print('Optimization of v finished!')
-    name = '.cache/v{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
+    name = os.path.join(save_dir, 'v{:03d}'.format(size))
     img0_256, img1_256, v256, _, _ = resize_all(256, img0_src, img1_src, v, p0_src, p1_src)
     if render:
         render_animation(img0_256, img1_256, v256, file_name=name+'.mov')
@@ -252,7 +261,7 @@ def SIM(x, y, C2=58.5, C3=29.3):
 
         c = (2 * sigma_x * sigma_y + C2) / (var_x + var_y + C2)
         s = (abs(cov_xy) + C3) / (sigma_x * sigma_y + C3)
-        return (c * s).mean()
+        return (c * s).sum()
 
     elif x.ndim == 5 and y.ndim == 5:
         x = x.reshape([x.shape[0], x.shape[1], -1])
@@ -268,13 +277,15 @@ def SIM(x, y, C2=58.5, C3=29.3):
 
         c = (2 * sigma_x * sigma_y + C2) / (var_x + var_y + C2)
         s = (abs(cov_xy) + C3) / (sigma_x * sigma_y + C3)
-        return (c * s).mean(axis=1)
+        return (c * s).sum(axis=1)
 
 def E_SIM(v, img0, img1, p=None):
     '''
     if p is None, compute and return sum of E_SIM(p)
     '''
     if v.ndim == 2 and v.shape[0] == v.shape[1]:
+        if v.shape[0] < 16 * 16:
+            return 0
         Y, X = np.meshgrid(np.arange(-2,3), np.arange(-2,3))
         Y = Y[:, :, np.newaxis]
         X = X[:, :, np.newaxis]
@@ -312,6 +323,8 @@ def E_SIM(v, img0, img1, p=None):
         sim = SIM(grid_img0, grid_img1)
         return -1 * sim
     else:
+        if v.shape[0] <= 16 or v.shape[1] <= 16:
+            return 0
         Y, X = np.meshgrid(np.arange(-2,3), np.arange(-2,3))
         Y = Y[:, :, np.newaxis]
         X = X[:, :, np.newaxis]
@@ -331,7 +344,6 @@ def E_SIM(v, img0, img1, p=None):
         grids_img1 = get_color(img1, grids + grids_v)
         sim = SIM(grids_img0, grids_img1)
         return -1 * sim
-
 
 def E_TPS(v):
     '''
