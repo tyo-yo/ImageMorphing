@@ -30,14 +30,17 @@ class NeuralImageMorphing():
     def run_morphing(self):
         opt = self.opt
         self.save_dir = os.path.join(self.opt.results_dir, self.opt.name)
+        img0_path = os.path.join(self.save_dir, 'original_A.png')
+        img1_path = os.path.join(self.save_dir, 'original_B.png')
         p0_path = os.path.join(self.save_dir,
             'correspondence_A_top_{}.txt'.format(opt.k_final))
         p1_path = os.path.join(self.save_dir,
             'correspondence_Bt_top_{}.txt'.format(opt.k_final))
         mov_name = self.opt.name + '.mov'
-        image_morphing(opt.datarootA, opt.datarootB, p0_path, p1_path,
+        image_morphing(img0_path, img1_path, p0_path, p1_path,
             render_name=mov_name, vmax_size=opt.vmax_size,
             lr_v=opt.lr_v, tol_v=opt.tol_v, lr_w=opt.lr_w, tol_w=opt.tol_w,
+            tol_count_v=opt.tol_count_v, tol_count_w=opt.tol_count_w,
             lambda_tps=opt.lambda_tps, gamma_ui=opt.gamma_ui, render=opt.render_logs,
             render_steps=opt.render_steps, render_time=opt.render_time, save_dir=self.save_dir
         )
@@ -63,11 +66,11 @@ class NeuralImageMorphing():
         else:
             img0_src = cv2.imread(self.opt.datarootA)
             img1_src = cv2.imread(self.opt.datarootB)
-            # v_final = resize_v(v=v, size=img0_src.shape[0], size_x=img0_src.shape[0])
-            # w_final = resize_v(v=w, size=img0_src.shape[0], size_x=img0_src.shape[0])
-            v_final = resize_v(v=v, size=img0_src.shape[1], size_x=img0_src.shape[0])
-            w_final = resize_v(v=w, size=img0_src.shape[1], size_x=img0_src.shape[0])
-            img1 = cv2.resize(img1_src, (img0_src.shape[1], img0_src.shape[0]))
+            v_final = resize_v(v=v, size=img0_src.shape[0])
+            w_final = resize_v(v=w, size=img0_src.shape[0])
+            # v_final = resize_v(v=v, size=img0_src.shape[1], size_x=img0_src.shape[0])
+            # w_final = resize_v(v=w, size=img0_src.shape[1], size_x=img0_src.shape[0])
+            img1 = cv2.resize(img1_src, (img0_src.shape[0], img0_src.shape[0]))
 
             save_path = os.path.join(save_dir, file_name)
             render_animation(img0_src, img1, v_final, w=w_final,
