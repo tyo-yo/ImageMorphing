@@ -7,12 +7,13 @@ from image_morphing.render import render_animation_256
 from datetime import datetime
 import time
 from scipy.optimize import minimize
+import os
 
 _iter = 0
 _args = ()
 _prev_time = 0
 _log_interbal = 0
-_LOGINTERBAL = 5
+_LOGINTERBAL = 10
 _elapsed_time = 0
 
 def log_cb(wk):
@@ -56,7 +57,8 @@ def optimize_w_scipy(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-1,
     return w_opt, res
 
 def adam_w(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
-    beta=1, lr=1e-3, beta1=0.9, beta2=0.999, eps=1e-8, tol_count=5):
+    beta=1, lr=1e-3, beta1=0.9, beta2=0.999, eps=1e-8, tol_count=3, save_dir='.cache'):
+    name = os.path.join(save_dir, 'w{:03d}'.format(size))
     w = resize_v(size, w_src)
     v = resize_v(size, v_src)
     args = (v, beta)
@@ -89,16 +91,19 @@ def adam_w(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
             if log_interbal > _LOGINTERBAL or iter == 1:
                 if GPU:
                     ew_numpy = np.asnumpy(ew)
-                print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(iter, ew[0], time.time() - start))
+                    print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(iter, ew_numpy[0], time.time() - start))
+                else:
+                    print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(iter, ew[0], time.time() - start))
                 log_interbal = 0
-            if prev_ew - ew < tol:
+            if abs(prev_ew - ew) < tol and ew < prev_ew:
+                break
+            elif prev_ew < ew:
                 count+= 1
                 if count > tol_count:
                     break
             prev_ew = ew
     except KeyboardInterrupt:
         print('Interrupted')
-        name = '.cache/w{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
         if img0_src is not None and img1_src is not None:
             render_animation_256(img0_src, img1_src, v, w=w, name=name+'.mov')
         np.save(name + '.npy', w)
@@ -113,8 +118,6 @@ def adam_w(size, w_src, v_src, img0_src=None, img1_src=None, tol=1e-3,
     print('iter {:4d}, E: {:.4f}, time: {:.1f} s'.format(
         iter, ew[0], end - start))
     print('Optimization of w finished!')
-
-    name = '.cache/w{:03d}_{}'.format(size, datetime.now().strftime('%m%d%H%M'))
     if img0_src is not None and img1_src is not None:
         render_animation_256(img0_src, img1_src, v, w=w, name=name)
     np.save(name + '.npy', w)
@@ -129,10 +132,10 @@ def Ed(w, *args):
         adj = np.zeros([size, size, 4, 2], dtype=np.int)
         for y, x in product(range(1, size), range(1, size)):
             i = y * size + x
-            adj[y, x, 0] = [i, i - size - 1]
-            adj[y, x, 1] = [i, i - size]
-            adj[y, x, 2] = [i, i - size + 1]
-            adj[y, x, 3] = [i, i - 1]
+            adj[y, x, 0] = np.array([i, i - size - 1])
+            adj[y, x, 1] = np.array([i, i - size])
+            adj[y, x, 2] = np.array([i, i - size + 1])
+            adj[y, x, 3] = np.array([i, i - 1])
         adj = adj[1:, 1:]
         adj = adj.reshape([-1, 2])
 
@@ -140,7 +143,10 @@ def Ed(w, *args):
         vpi = v_fl[adj[:, 0], :]
         vpj = v_fl[adj[:, 1], :]
 
-        p = np.array(np.meshgrid(np.arange(size), np.arange(size)))
+        X, Y = np.meshgrid(np.arange(size), np.arange(size))
+        p = np.zeros([2, size, size], dtype=np.int)
+        p[0] = X
+        p[1] = Y
         p =  p.transpose(1,2,0)
         p = p[:, :, ::-1]
         p = p.reshape(-1, 2)
@@ -165,10 +171,10 @@ def Ed(w, *args):
         adj = np.zeros([size, size, 4, 2], dtype=np.int)
         for y, x in product(range(1, size), range(1, size)):
             i = y * size + x
-            adj[y, x, 0] = [i, i - size - 1]
-            adj[y, x, 1] = [i, i - size]
-            adj[y, x, 2] = [i, i - size + 1]
-            adj[y, x, 3] = [i, i - 1]
+            adj[y, x, 0] = np.array([i, i - size - 1])
+            adj[y, x, 1] = np.array([i, i - size])
+            adj[y, x, 2] = np.array([i, i - size + 1])
+            adj[y, x, 3] = np.array([i, i - 1])
         adj = adj[1:, 1:]
         adj = adj.reshape([-1, 2])
 
@@ -176,7 +182,10 @@ def Ed(w, *args):
         vpi = v_fl[adj[:, 0], :]
         vpj = v_fl[adj[:, 1], :]
 
-        p = np.array(np.meshgrid(np.arange(size), np.arange(size)))
+        X, Y = np.meshgrid(np.arange(size), np.arange(size))
+        p = np.zeros([2, size, size], dtype=np.int)
+        p[0] = X
+        p[1] = Y
         p =  p.transpose(1,2,0)
         p = p[:, :, ::-1]
         p = p.reshape(-1, 2)
